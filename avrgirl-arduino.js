@@ -57,10 +57,7 @@ Avrgirl_arduino.prototype._setUpSerial = function() {
  * Opens and parses a given hex file
  */
 Avrgirl_arduino.prototype._parseHex = function(file) {
-    var data = fs.readFileSync(file, {
-        encoding: 'utf8'
-    });
-    return intelhex.parse(data).data;
+    return intelhex.parse(file).data;
 };
 
 
@@ -341,15 +338,12 @@ Avrgirl_arduino.prototype._resetAVR109 = function(callback) {
 
     self.debug('resetting board...');
 
-    function reset(){
+    function reset(rcb){
         // open a connection, then immediately close to perform the reset of the board.
         self.serialPort.open(function() {
             self._cycleDTR(function(error) {
                 if (error) { return callback(error); }
-                tryConnect(function(connected){
-                    var status = connected ? null : new Error('could not complete reset.');
-                    return callback(status);
-                });
+                rcb();
             });
         });
     }
@@ -392,20 +386,21 @@ Avrgirl_arduino.prototype._resetAVR109 = function(callback) {
                 // iterate through ports looking for the one port to rule them all
                 for (var i = 0; i < ports.length; i++) {
                     var name = ports[i].comName.replace('cu', 'tty');
-                    if (ports[i].comName === self.options.port) {
+                    console.log(name)
+                    if (name === self.options.port) {
                         return callback(true);
                     }
                 }
                 tries += 1;
                 if (tries < 4) {
-                    setTimeout(checkList, 300);
+                    setTimeout(checkList, 1000);
                 } else {
                     // timeout on too many tries
                     return callback(false);
                 }
             });
         }
-        setTimeout(checkList, 300);
+        setTimeout(checkList, 1000);
     }
 };
 
@@ -430,37 +425,33 @@ Avrgirl_arduino.prototype._uploadAVR109 = function(eggs, callback) {
         }
         self.debug('connected');
 
-        fs.readFile(eggs, function(error, data) {
+        var data = eggs;
+
+        self.chip.init(self.serialPort, {
+            signature: self.board.signature.toString()
+        }, function(error, flasher) {
             if (error) {
                 return callback(error);
             }
+            self.debug('flashing, please wait...');
 
-            self.chip.init(self.serialPort, {
-                signature: self.board.signature.toString()
-            }, function(error, flasher) {
-                if (error) {
-                    return callback(error);
+            async.series([
+                function(callback) {
+                    flasher.erase(callback);
+                },
+                function(callback) {
+                    flasher.program(data.toString(), callback);
+                },
+                function(callback) {
+                    flasher.verify(callback);
+                },
+                function(callback) {
+                    flasher.fuseCheck(callback);
                 }
-                self.debug('flashing, please wait...');
-
-                async.series([
-                    function(callback) {
-                        flasher.erase(callback);
-                    },
-                    function(callback) {
-                        flasher.program(data.toString(), callback);
-                    },
-                    function(callback) {
-                        flasher.verify(callback);
-                    },
-                    function(callback) {
-                        flasher.fuseCheck(callback);
-                    }
-                ],
-                function(err, results) {
-                    self.debug('flash complete.');
-                    return callback(err);
-                });
+            ],
+            function(err, results) {
+                self.debug('flash complete.');
+                return callback(err);
             });
         });
     });
