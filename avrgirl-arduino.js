@@ -1,4 +1,4 @@
-var Serialport = require('serialport');
+var Serialport = serialport;
 var intelhex = require('intel-hex');
 var Stk500v1 = require('stk500');
 var Stk500v2 = require('stk500-v2');
