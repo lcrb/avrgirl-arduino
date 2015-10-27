@@ -335,6 +335,10 @@ Avrgirl_arduino.prototype._resetAVR109 = function(callback) {
     var resetFile = __dirname + '/lib/leo-reset.js';
     var tries = 0;
 
+    self.serialPort = new Serialport.SerialPort(self.options.port, {
+        baudRate: 1200
+    });
+
     self.debug('resetting board...');
 
     function reset(){
