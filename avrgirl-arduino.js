@@ -5,6 +5,7 @@ var Stk500v2 = require('stk500-v2');
 var avr109 = require('chip.avr.avr109');
 var async = require('async');
 var boards = require('./boards');
+var findNewCOMPort = require('./lib/find_new_com_port.js');
 
 /**
  * Constructor
@@ -333,20 +334,72 @@ Avrgirl_arduino.prototype._resetAVR109 = function(callback) {
 
     self.debug('resetting board...');
 
-    self.serialPort = new Serialport.SerialPort(self.options.port, {
-        baudRate: 1200,
-    });
-
-    // open a connection, then immediately close to perform the reset of the board.
-    self.serialPort.open(function() {
-        self._cycleDTR(function(error) {
-            if (error) { return callback(error); }
-            self._pollForPort(function(connected) {
-                var status = connected ? null : new Error('could not complete reset.');
-                return callback(status);
+    function reset(){
+        // open a connection, then immediately close to perform the reset of the board.
+        self.serialPort.open(function() {
+            self._cycleDTR(function(error) {
+                if (error) { return callback(error); }
+                tryConnect(function(connected){
+                    var status = connected ? null : new Error('could not complete reset.');
+                    return callback(status);
+                });
             });
         });
-    });
+    }
+
+    if(port.indexOf('COM') != -1){
+        var beforePorts;
+        Serialport.list(function(err, ports){
+            beforePorts = ports;
+        });
+
+        var afterPorts;
+        reset(function(){
+            setTimeout(function(){
+                Serialport.list(function(err, ports){
+                    afterPorts = ports;
+
+                    self.options.port = findNewCOMPort(beforePorts, afterPorts);
+                    port = self.options.port;
+
+                    callback();
+                });
+            }, 5000);
+        });
+    }else{
+        reset(function(){
+            tryConnect(function(connected){
+                var status = connected ? null : new Error('could not complete reset.');
+                setTimeout(function(){
+                    callback(status);
+                }, 500);
+            });
+        });
+    }
+
+    // here we have to retry the serialport polling,
+    // until the chip boots back up to recreate the virtual com port
+    function tryConnect (callback) {
+        function checkList() {
+            Serialport.list(function (error, ports) {
+                // iterate through ports looking for the one port to rule them all
+                for (var i = 0; i < ports.length; i++) {
+                    var name = ports[i].comName.replace('cu', 'tty');
+                    if (ports[i].comName === self.options.port) {
+                        return callback(true);
+                    }
+                }
+                tries += 1;
+                if (tries < 4) {
+                    setTimeout(checkList, 300);
+                } else {
+                    // timeout on too many tries
+                    return callback(false);
+                }
+            });
+        }
+        setTimeout(checkList, 300);
+    }
 };
 
 /**
