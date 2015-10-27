@@ -4,10 +4,7 @@ var Stk500v1 = require('stk500');
 var Stk500v2 = require('stk500-v2');
 var avr109 = require('chip.avr.avr109');
 var async = require('async');
-var fs = require('graceful-fs');
 var boards = require('./boards');
-var childProcess = require('child_process');
-var colors = require('colors');
 
 /**
  * Constructor
@@ -254,9 +251,7 @@ Avrgirl_arduino.prototype._uploadSTK500v1 = function(eggs, callback) {
             self.debug('flashing, please wait...');
             // flash
             self.chip.bootload(self.serialPort, hex, self.board, function(error) {
-                var color = (error ? colors.red : colors.green);
-
-                self.debug(color('flash complete.'));
+                self.debug('flash complete.');
 
                 // Always close the serialport
                 self.serialPort.close();
@@ -318,9 +313,7 @@ Avrgirl_arduino.prototype._uploadSTK500v2 = function(eggs, callback) {
             }
         ],
         function(err, results) {
-            var color = (err ? colors.red : colors.green);
-
-            self.debug(color('flash complete.'));
+            self.debug('flash complete.');
 
             // Always close the serialport
             self.serialPort.close();
@@ -405,9 +398,7 @@ Avrgirl_arduino.prototype._uploadAVR109 = function(eggs, callback) {
                     }
                 ],
                 function(err, results) {
-                    var color = (err ? colors.red : colors.green);
-
-                    self.debug(color('flash complete.'));
+                    self.debug('flash complete.');
                     return callback(err);
                 });
             });
