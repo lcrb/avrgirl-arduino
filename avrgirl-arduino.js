@@ -331,6 +331,9 @@ Avrgirl_arduino.prototype._uploadSTK500v2 = function(eggs, callback) {
  */
 Avrgirl_arduino.prototype._resetAVR109 = function(callback) {
     var self = this;
+    var port = self.options.port;
+    var resetFile = __dirname + '/lib/leo-reset.js';
+    var tries = 0;
 
     self.debug('resetting board...');
 
