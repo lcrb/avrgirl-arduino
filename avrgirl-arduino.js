@@ -7,6 +7,8 @@ var async = require('async');
 var boards = require('./boards');
 var findNewCOMPort = require('./lib/find_new_com_port.js');
 
+var ee = require('wolfy87-eventemitter');
+
 /**
  * Constructor
  *
@@ -334,7 +336,7 @@ Avrgirl_arduino.prototype._resetAVR109 = function(callback) {
 
     self.serialPort = new Serialport.SerialPort(self.options.port, {
         baudRate: 1200
-    });
+    }, false);
 
     self.debug('resetting board...');
 
@@ -360,12 +362,16 @@ Avrgirl_arduino.prototype._resetAVR109 = function(callback) {
                 Serialport.list(function(err, ports){
                     afterPorts = ports;
 
-                    self.options.port = findNewCOMPort(beforePorts, afterPorts);
+                    self.serialPort.close();
+                    self.serialPort = null;
+                    self.options.port = findNewCOMPort(beforePorts, afterPorts, port);
                     port = self.options.port;
 
-                    callback();
+                    setTimeout(function(){
+                        callback();
+                    }, 500);
                 });
-            }, 5000);
+            }, 4000);
         });
     }else{
         reset(function(){
@@ -386,7 +392,6 @@ Avrgirl_arduino.prototype._resetAVR109 = function(callback) {
                 // iterate through ports looking for the one port to rule them all
                 for (var i = 0; i < ports.length; i++) {
                     var name = ports[i].comName.replace('cu', 'tty');
-                    console.log(name)
                     if (name === self.options.port) {
                         return callback(true);
                     }
@@ -427,8 +432,15 @@ Avrgirl_arduino.prototype._uploadAVR109 = function(eggs, callback) {
 
         var data = eggs;
 
+        var delay = function(callback){
+            setTimeout(callback, 2000);
+        }
+
+        var interval;
+
         self.chip.init(self.serialPort, {
-            signature: self.board.signature.toString()
+            signature: self.board.signature.toString(),
+            debug: false
         }, function(error, flasher) {
             if (error) {
                 return callback(error);
@@ -437,20 +449,40 @@ Avrgirl_arduino.prototype._uploadAVR109 = function(eggs, callback) {
 
             async.series([
                 function(callback) {
+                    self.debug('flasing, erasing..');
                     flasher.erase(callback);
                 },
                 function(callback) {
-                    flasher.program(data.toString(), callback);
+                    self.debug('flasing, programming..');
+
+                    flasher.program(data, callback);
+
+                    var maxCmds = 0;
+                    interval = setInterval(function(){
+                        if(flasher.cmds.length > maxCmds){
+                            maxCmds = flasher.cmds.length;
+                        }else{
+                            var progress = Math.ceil(100 * ((maxCmds - flasher.cmds.length) / maxCmds));
+                            ee.emitEvent('progress', [progress])                            
+                        }
+                    }, 50);
+                },
+                function(callback){
+                    clearInterval(interval);
+                    callback();
                 },
                 function(callback) {
+                    self.debug('flasing, verifying..');
                     flasher.verify(callback);
                 },
                 function(callback) {
+                    self.debug('flasing, fusecheck..');
                     flasher.fuseCheck(callback);
                 }
             ],
             function(err, results) {
                 self.debug('flash complete.');
+                self.serialPort.close();
                 return callback(err);
             });
         });
