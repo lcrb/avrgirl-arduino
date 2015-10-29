@@ -465,7 +465,7 @@ Avrgirl_arduino.prototype._uploadAVR109 = function(eggs, callback) {
                             maxCmds = flasher.cmds.length;
                         }else{
                             var progress = Math.ceil(100 * ((maxCmds - flasher.cmds.length) / maxCmds));
-                            ee.emitEvent('progress', [progress])                            
+                            self.eventEmitter.emitEvent('progress', [progress])                            
                         }
                     }, 50);
                 },
