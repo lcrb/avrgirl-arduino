@@ -528,4 +528,5 @@ Avrgirl_arduino.prototype._sniffPort = function(callback) {
     });
 };
 
+Avrgirl_arduino.eventEmitter = ee;
 module.exports = Avrgirl_arduino;
