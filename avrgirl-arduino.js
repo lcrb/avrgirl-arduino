@@ -7,7 +7,7 @@ var async = require('async');
 var boards = require('./boards');
 var findNewCOMPort = require('./lib/find_new_com_port.js');
 
-var ee = require('wolfy87-eventemitter');
+var EventEmitter = require('wolfy87-eventemitter');
 
 /**
  * Constructor
@@ -43,6 +43,8 @@ var Avrgirl_arduino = function(opts) {
     } else if (this.board.protocol === 'avr109') {
         this.chip = avr109;
     }
+
+    this.eventEmitter = new EventEmitter();
 };
 
 /**
@@ -528,5 +530,4 @@ Avrgirl_arduino.prototype._sniffPort = function(callback) {
     });
 };
 
-Avrgirl_arduino.eventEmitter = ee;
 module.exports = Avrgirl_arduino;
