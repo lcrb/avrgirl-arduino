@@ -451,11 +451,11 @@ Avrgirl_arduino.prototype._uploadAVR109 = function(eggs, callback) {
 
             async.series([
                 function(callback) {
-                    self.debug('flasing, erasing..');
+                    self.debug('flashing, erasing..');
                     flasher.erase(callback);
                 },
                 function(callback) {
-                    self.debug('flasing, programming..');
+                    self.debug('flashing, programming..');
 
                     flasher.program(data, callback);
 
@@ -474,11 +474,11 @@ Avrgirl_arduino.prototype._uploadAVR109 = function(eggs, callback) {
                     callback();
                 },
                 function(callback) {
-                    self.debug('flasing, verifying..');
+                    self.debug('flashing, verifying..');
                     flasher.verify(callback);
                 },
                 function(callback) {
-                    self.debug('flasing, fusecheck..');
+                    self.debug('flashing, fusecheck..');
                     flasher.fuseCheck(callback);
                 }
             ],
