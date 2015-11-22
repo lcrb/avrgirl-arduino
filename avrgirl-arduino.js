@@ -123,13 +123,20 @@ Avrgirl_arduino.prototype._upload = function(hex, callback) {
     } else if (self.board.protocol === 'stk500v2') {
         self._uploadSTK500v2(eggs, cb);
     } else if (self.board.protocol === 'avr109') {
-        self._resetAVR109(function(error) {
-            if (error) {
-                return cb(error);
+        this.updateAttemptInterval = setInterval(function() {
+            try {
+                self._resetAVR109(function(error) {
+                    if (error) {
+                        console.error('Update Error. Trying Again', error);
+                    }
+
+                    self.debug('reset complete.');
+                    self._uploadAVR109(eggs, cb);
+                });
+            } catch(e) {
+                console.error('Update Error. Trying Again', e);
             }
-            self.debug('reset complete.');
-            self._uploadAVR109(eggs, cb);
-        });
+        }, 20000);
     }
 };
 
@@ -381,7 +388,7 @@ Avrgirl_arduino.prototype._resetAVR109 = function(callback) {
                 var status = connected ? null : new Error('could not complete reset.');
                 setTimeout(function(){
                     callback(status);
-                }, 500);
+                }, 1000);
             });
         });
     }
@@ -444,6 +451,8 @@ Avrgirl_arduino.prototype._uploadAVR109 = function(eggs, callback) {
             signature: self.board.signature.toString(),
             debug: false
         }, function(error, flasher) {
+            clearInterval(self.updateAttemptInterval);
+
             if (error) {
                 return callback(error);
             }
