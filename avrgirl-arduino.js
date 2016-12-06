@@ -1,6 +1,7 @@
 var boards = require('./boards');
 var Connection = require('./lib/connection');
 var protocols = require('./lib/protocols');
+var getDebug = require('./lib/debug.js');
 
 /**
  * Constructor
@@ -16,7 +17,7 @@ var AvrgirlArduino = function(opts) {
         port: opts.port || ''
     };
 
-    this.debug = this.options.debug ? console.log.bind(console) : function() {};
+    this.debug = getDebug(opts.debug);
 
     this.connection = new Connection(this.options);
 
